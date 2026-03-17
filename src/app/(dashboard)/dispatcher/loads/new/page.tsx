@@ -32,11 +32,11 @@ export default function NewLoadPage() {
     e.preventDefault()
     createLoad.mutate(
       {
-        pickupLocation: form.pickupLocation,
+        pickupLocation:  form.pickupLocation,
         dropoffLocation: form.dropoffLocation,
-        pickupDate: form.pickupDate,
-        deliveryDate: form.deliveryDate,
-        loadRate: parseFloat(form.loadRate),
+        pickupDate:      new Date(form.pickupDate).toISOString(),
+        deliveryDate:    new Date(form.deliveryDate).toISOString(),
+        loadRate:        parseFloat(form.loadRate),
         ...(form.notes ? { notes: form.notes } : {}),
       },
       {

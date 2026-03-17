@@ -111,7 +111,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto">
+        {user.role === 'DISPATCHER' && (user as any).mustChangePassword && (
+          <div className="flex items-center gap-3 px-5 py-3 bg-amber-500/10 border-b border-amber-500/20">
+            <span className="text-amber-400">⚠</span>
+            <p className="text-amber-300 text-sm">
+              You are using a temporary password.{' '}
+              <a href="/dispatcher/account" className="underline font-medium hover:text-amber-200">
+                Change it now
+              </a>{' '}
+              to secure your account.
+            </p>
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   )
 }
