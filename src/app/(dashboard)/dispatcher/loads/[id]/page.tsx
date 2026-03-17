@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import {
   useLoad,
+  useUpdateLoad,
   useAssignLoad,
   useAcceptDelivery,
   useRejectDelivery,
@@ -32,9 +33,11 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function DispatcherLoadDetailPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const id = params.id as string
 
   const { data: load, isLoading } = useLoad(id)
+  const updateLoad = useUpdateLoad()
   const assignLoad = useAssignLoad()
   const acceptDelivery = useAcceptDelivery()
   const rejectDelivery = useRejectDelivery()
@@ -42,6 +45,61 @@ export default function DispatcherLoadDetailPage() {
 
   const [showAssignForm, setShowAssignForm] = useState(false)
   const [assignForm, setAssignForm] = useState({ fleetId: '', driverId: '', vehicleId: '' })
+
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [editForm, setEditForm] = useState({
+    loadNumber: '',
+    pickupLocation: '',
+    dropoffLocation: '',
+    pickupDate: '',
+    deliveryDate: '',
+    loadRate: '',
+    notes: '',
+  })
+
+  useEffect(() => {
+    if (load && load.status === 'DRAFT' && searchParams.get('edit') === '1') {
+      openEditForm()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+
+  function openEditForm() {
+    if (!load) return
+    setEditForm({
+      loadNumber:      load.loadNumber ?? '',
+      pickupLocation:  load.pickupLocation,
+      dropoffLocation: load.dropoffLocation,
+      pickupDate:      load.pickupDate ? load.pickupDate.slice(0, 10) : '',
+      deliveryDate:    load.deliveryDate ? load.deliveryDate.slice(0, 10) : '',
+      loadRate:        String(load.loadRate),
+      notes:           load.notes ?? '',
+    })
+    setShowEditForm(true)
+  }
+
+  function handleEditChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setEditForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    updateLoad.mutate(
+      {
+        id,
+        data: {
+          ...(editForm.loadNumber ? { loadNumber: editForm.loadNumber } : {}),
+          pickupLocation:  editForm.pickupLocation,
+          dropoffLocation: editForm.dropoffLocation,
+          pickupDate:      new Date(editForm.pickupDate + 'T12:00:00Z').toISOString(),
+          deliveryDate:    new Date(editForm.deliveryDate + 'T12:00:00Z').toISOString(),
+          loadRate:        parseFloat(editForm.loadRate),
+          ...(editForm.notes ? { notes: editForm.notes } : {}),
+        },
+      },
+      { onSuccess: () => setShowEditForm(false) }
+    )
+  }
 
   function handleAssignChange(e: React.ChangeEvent<HTMLInputElement>) {
     setAssignForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -91,6 +149,7 @@ export default function DispatcherLoadDetailPage() {
 
   const canCancel = load.status === 'DRAFT' || load.status === 'ASSIGNED'
   const canAssign = load.status === 'DRAFT'
+  const canEdit   = load.status === 'DRAFT'
   const pendingConfirmation = load.status === 'PENDING_DELIVERY_CONFIRMATION'
 
   return (
@@ -98,7 +157,7 @@ export default function DispatcherLoadDetailPage() {
       <PageHeader
         title={
           <span className="flex items-center gap-3">
-            {load.loadNumber}
+            {load.loadNumber ?? load.serialNumber}
             <StatusBadge status={load.status} />
           </span>
         }
@@ -114,8 +173,16 @@ export default function DispatcherLoadDetailPage() {
       />
 
       {/* Action Bar */}
-      {(canAssign || canCancel || pendingConfirmation) && (
+      {(canAssign || canEdit || canCancel || pendingConfirmation) && (
         <div className="flex flex-wrap gap-2 mb-6">
+          {canEdit && !showEditForm && (
+            <button
+              onClick={openEditForm}
+              className="border border-white/[0.08] text-zinc-300 hover:text-white hover:border-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              Edit Load
+            </button>
+          )}
           {canAssign && !showAssignForm && (
             <button
               onClick={() => setShowAssignForm(true)}
@@ -151,6 +218,118 @@ export default function DispatcherLoadDetailPage() {
               {cancelLoad.isPending ? 'Cancelling…' : 'Cancel Load'}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Edit Form */}
+      {showEditForm && (
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 mb-6">
+          <p className="text-white font-medium text-sm mb-4">Edit Load</p>
+          <form onSubmit={handleEditSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className={labelClass} htmlFor="edit-loadNumber">Load Number</label>
+                <input
+                  id="edit-loadNumber"
+                  name="loadNumber"
+                  type="text"
+                  value={editForm.loadNumber}
+                  onChange={handleEditChange}
+                  placeholder="e.g. BOL-2026-001"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-pickupLocation">Pickup Location</label>
+                <input
+                  id="edit-pickupLocation"
+                  name="pickupLocation"
+                  type="text"
+                  required
+                  value={editForm.pickupLocation}
+                  onChange={handleEditChange}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-dropoffLocation">Dropoff Location</label>
+                <input
+                  id="edit-dropoffLocation"
+                  name="dropoffLocation"
+                  type="text"
+                  required
+                  value={editForm.dropoffLocation}
+                  onChange={handleEditChange}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-pickupDate">Pickup Date</label>
+                <input
+                  id="edit-pickupDate"
+                  name="pickupDate"
+                  type="date"
+                  required
+                  value={editForm.pickupDate}
+                  onChange={handleEditChange}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-deliveryDate">Delivery Date</label>
+                <input
+                  id="edit-deliveryDate"
+                  name="deliveryDate"
+                  type="date"
+                  required
+                  value={editForm.deliveryDate}
+                  onChange={handleEditChange}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-loadRate">Load Rate (USD)</label>
+                <input
+                  id="edit-loadRate"
+                  name="loadRate"
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={editForm.loadRate}
+                  onChange={handleEditChange}
+                  className={inputClass}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className={labelClass} htmlFor="edit-notes">Notes <span className="text-zinc-600 text-xs">(optional)</span></label>
+                <textarea
+                  id="edit-notes"
+                  name="notes"
+                  rows={3}
+                  value={editForm.notes}
+                  onChange={handleEditChange}
+                  className={`${inputClass} resize-none`}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                type="submit"
+                disabled={updateLoad.isPending}
+                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {updateLoad.isPending ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditForm(false)}
+                className="border border-white/[0.08] text-zinc-400 hover:text-white hover:border-white/20 px-3 py-1.5 rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -226,7 +405,8 @@ export default function DispatcherLoadDetailPage() {
           {/* Load Details Card */}
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
             <p className="text-white font-medium text-sm mb-3">Load Details</p>
-            <InfoRow label="Load Number" value={load.loadNumber} />
+            {load.loadNumber && <InfoRow label="Load Number" value={load.loadNumber} />}
+            <InfoRow label="Serial Number" value={load.serialNumber} />
             <InfoRow label="Pickup Location" value={load.pickupLocation} />
             <InfoRow label="Dropoff Location" value={load.dropoffLocation} />
             <InfoRow label="Pickup Date" value={fmtDate(load.pickupDate)} />

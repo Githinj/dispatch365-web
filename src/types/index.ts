@@ -124,7 +124,8 @@ export type LoadStatus =
 
 export interface Load {
   id: string
-  loadNumber: string
+  serialNumber: string
+  loadNumber?: string | null
   agencyId: string
   dispatcherId: string
   fleetId?: string
@@ -193,7 +194,7 @@ export interface Invoice {
   isDisputed: boolean
   disputeReason?: string
   pdfUrl?: string
-  load?: { id: string; loadNumber: string; pickupLocation: string; dropoffLocation: string }
+  load?: { id: string; serialNumber: string; loadNumber?: string | null; pickupLocation: string; dropoffLocation: string }
   fleet?: { id: string; name: string }
   receipt?: Receipt
   createdAt: string

@@ -16,6 +16,7 @@ export default function NewLoadPage() {
   const createLoad = useCreateLoad()
 
   const [form, setForm] = useState({
+    loadNumber: '',
     pickupLocation: '',
     dropoffLocation: '',
     pickupDate: '',
@@ -32,10 +33,11 @@ export default function NewLoadPage() {
     e.preventDefault()
     createLoad.mutate(
       {
+        loadNumber:      form.loadNumber,
         pickupLocation:  form.pickupLocation,
         dropoffLocation: form.dropoffLocation,
-        pickupDate:      new Date(form.pickupDate).toISOString(),
-        deliveryDate:    new Date(form.deliveryDate).toISOString(),
+        pickupDate:      new Date(form.pickupDate + 'T12:00:00Z').toISOString(),
+        deliveryDate:    new Date(form.deliveryDate + 'T12:00:00Z').toISOString(),
         loadRate:        parseFloat(form.loadRate),
         ...(form.notes ? { notes: form.notes } : {}),
       },
@@ -65,6 +67,22 @@ export default function NewLoadPage() {
       <form onSubmit={handleSubmit}>
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2">
+              <label className={labelClass} htmlFor="loadNumber">
+                Load Number <span className="text-orange-500">*</span>
+              </label>
+              <input
+                id="loadNumber"
+                name="loadNumber"
+                type="text"
+                required
+                placeholder="e.g. BOL-2026-001 or shipper reference"
+                value={form.loadNumber}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </div>
+
             <div>
               <label className={labelClass} htmlFor="pickupLocation">
                 Pickup Location <span className="text-orange-500">*</span>

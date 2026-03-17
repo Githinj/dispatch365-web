@@ -36,6 +36,20 @@ export function useCreateLoad() {
   })
 }
 
+export function useUpdateLoad() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      api.patch(`/loads/${id}`, data),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ['loads', id] })
+      qc.invalidateQueries({ queryKey: ['loads'] })
+      toast.success('Load updated.')
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to update load'),
+  })
+}
+
 export function useAssignLoad() {
   const qc = useQueryClient()
   return useMutation({

@@ -44,7 +44,10 @@ export default function DispatcherLoadsPage() {
       key: 'loadNumber',
       header: 'Load #',
       render: (row: Load) => (
-        <span className="text-orange-400 font-medium">{row.loadNumber}</span>
+        <div>
+          <span className="text-orange-400 font-medium">{row.loadNumber ?? '—'}</span>
+          <p className="text-zinc-600 text-xs">{row.serialNumber}</p>
+        </div>
       ),
     },
     {
@@ -79,6 +82,20 @@ export default function DispatcherLoadsPage() {
       render: (row: Load) => (
         <span className="text-zinc-300 font-medium">{fmt(row.loadRate)}</span>
       ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (row: Load) =>
+        row.status === 'DRAFT' ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/dispatcher/loads/${row.id}?edit=1`) }}
+            title="Edit load"
+            className="p-1.5 rounded-md text-zinc-500 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+          >
+            ✏
+          </button>
+        ) : null,
     },
   ]
 
